@@ -31,7 +31,7 @@ deriving instance (ForallF ToJSON f, Has ToJSON f, ToJSON1 g) => ToJSON (Monoida
 instance (ForallF Semigroup g, GCompare f) => Semigroup (MonoidalDMap f g) where
   (MonoidalDMap m) <> (MonoidalDMap n) = MonoidalDMap (DMap.unionWithKey (\_ (u :: g a) v -> (u <> v) \\ (instF :: ForallF Semigroup g :- Semigroup (g a))) m n)
 
-instance (ForallF Monoid g, GCompare f) => Monoid (MonoidalDMap f g) where
+instance (ForallF Semigroup g, ForallF Monoid g, GCompare f) => Monoid (MonoidalDMap f g) where
   mempty = empty
   mappend (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.unionWithKey (\_ (u :: g a) v -> mappend u v \\ (instF :: ForallF Monoid g :- Monoid (g a))) m n)
 
