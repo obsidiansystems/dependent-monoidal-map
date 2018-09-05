@@ -7,6 +7,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GADTs #-}
 
 module Data.Dependent.Map.Monoidal where
 
@@ -20,24 +21,83 @@ import qualified Data.Dependent.Map as DMap
 import Data.Dependent.Sum
 import Data.Dependent.Sum.Orphans ()
 import Data.GADT.Compare
+import Data.GADT.Show
 import Data.Maybe
 import Data.Semigroup
 import Data.Some hiding (This)
+import Text.Read
 import Prelude hiding (lookup, map)
 
 newtype MonoidalDMap (f :: k -> *) (g :: k -> *) = MonoidalDMap { unMonoidalDMap :: DMap f g }
-  deriving (Eq, Ord, Read, Show)
 
-deriving instance (ForallF ToJSON f, Has ToJSON f, ToJSON1 g) => ToJSON (MonoidalDMap f g)
+-- Temporary shim to avoid making changes to dependent-sum and dependent-map.
+-- TODO: Finalise constraints-extras and optionally get it upstreamed into constraints.
+-- Then actually get these instances into the real DSum and DMap,
+-- killing off EqTag, OrdTag, ShowTag and ReadTag.
+newtype FakeDSum f g = FakeDSum { unFakeDSum :: DSum f g }
+
+instance (GEq f, Has' Eq f g) => Eq (FakeDSum f g) where
+  FakeDSum ((k :: k a) :=> v) == FakeDSum (k' :=> v') = case geq k k' of
+    Nothing -> False
+    Just Refl -> has' @Eq @g k (v == v')
+
+instance (GCompare f, Has' Eq f g, Has' Ord f g) => Ord (FakeDSum f g) where
+  compare (FakeDSum (k :=> v)) (FakeDSum (k' :=> v')) = case gcompare k k' of
+    GLT -> LT
+    GGT -> GT
+    GEQ -> has' @Ord @g k (compare v v')
+
+-- NB: We're not going to show/parse the "FakeDSum" constructor, because this whole datatype is a temporary shim.
+instance (ForallF Show f, Has' Show f g) => Show (FakeDSum f g) where
+  showsPrec p (FakeDSum ((k :: f a) :=> v)) = showParen (p >= 10)
+    ( whichever @Show @f @a (showsPrec 0 k)
+    . showString " :=> "
+    . has' @Show @g k (showsPrec 1 v)
+    )
+
+instance (GRead f, Has' Read f g) => Read (FakeDSum f g) where
+  readsPrec p = readParen (p > 1) $ \s -> 
+    concat
+      [ getGReadResult withTag $ \tag ->
+          [ (FakeDSum (tag :=> val), rest'')
+          | (val, rest'') <- has' @Read @g tag $ readsPrec 1 rest'
+          ]
+      | (withTag, rest) <- greadsPrec p s
+      , (":=>", rest') <- lex rest
+      ]
+
+instance forall f g. (Has' Eq f g, GCompare f) => Eq (MonoidalDMap f g) where
+  MonoidalDMap m == MonoidalDMap m' =
+    (coerce (DMap.toList m) :: [FakeDSum f g]) == (coerce (DMap.toList m'))
+
+instance forall f g. (Has' Eq f g, Has' Ord f g, GCompare f) => Ord (MonoidalDMap f g) where
+  compare (MonoidalDMap m) (MonoidalDMap m') =
+    compare (coerce (DMap.toList m) :: [FakeDSum f g]) (coerce (DMap.toList m'))
+
+instance (Show (FakeDSum k f)) => Show (MonoidalDMap k f) where
+    showsPrec p m = showParen (p>10)
+        ( showString "fromList "
+        . showsPrec 11 (coerce (toList m) :: [FakeDSum k f])
+        )
+
+instance (GCompare k, Read (FakeDSum k f)) => Read (MonoidalDMap k f) where
+  readPrec = parens $ prec 10 $ do
+    Ident "fromList" <- lexP
+    xs <- readPrec
+    return . MonoidalDMap . DMap.fromList $ coerce (xs :: [FakeDSum k f])
+  readListPrec = readListPrecDefault
+
+deriving instance (ToJSON (DMap f g)) => ToJSON (MonoidalDMap f g)
 
 instance (Has' Semigroup f g, GCompare f) => Semigroup (MonoidalDMap f g) where
-  (MonoidalDMap m) <> (MonoidalDMap n) = MonoidalDMap (DMap.unionWithKey (\f (u :: g a) v -> has' @Semigroup @g f (u <> v)) m n)
+  (MonoidalDMap m) <> (MonoidalDMap n) =
+    MonoidalDMap (DMap.unionWithKey (\f (u :: g a) v -> has' @Semigroup @g f (u <> v)) m n)
 
 instance (Has' Semigroup f g, GCompare f) => Monoid (MonoidalDMap f g) where
   mempty = empty
   mappend m n = m <> n
 
-deriving instance (FromJSON (Some f), GCompare f, Has FromJSON f, FromJSON1 g) => FromJSON (MonoidalDMap f g)
+deriving instance (FromJSON (DMap f g)) => FromJSON (MonoidalDMap f g)
 
 {--------------------------------------------------------------------
   Construction
