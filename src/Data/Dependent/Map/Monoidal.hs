@@ -13,7 +13,6 @@ module Data.Dependent.Map.Monoidal where
 
 import Data.Aeson
 import Data.Coerce
-import Data.Constraint
 import Data.Constraint.Extras
 import Data.Constraint.Forall
 import Data.Dependent.Map (DMap)
@@ -56,7 +55,7 @@ instance (ForallF Show f, Has' Show f g) => Show (FakeDSum f g) where
     )
 
 instance (GRead f, Has' Read f g) => Read (FakeDSum f g) where
-  readsPrec p = readParen (p > 1) $ \s -> 
+  readsPrec p = readParen (p > 1) $ \s ->
     concat
       [ getGReadResult withTag $ \tag ->
           [ (FakeDSum (tag :=> val), rest'')
@@ -139,7 +138,7 @@ lookup k (MonoidalDMap m) = DMap.lookup k m
 
 -- | /O(log n)/. Delete and find the minimal element.
 --
--- > deleteFindMin (fromList [(5,"a"), (3,"b"), (10,"c")]) == ((3,"b"), fromList[(5,"a"), (10,"c")]) 
+-- > deleteFindMin (fromList [(5,"a"), (3,"b"), (10,"c")]) == ((3,"b"), fromList[(5,"a"), (10,"c")])
 -- > deleteFindMin                                            Error: can not return the minimal element of an empty map
 
 deleteFindMin :: MonoidalDMap k f -> (DSum k f, MonoidalDMap k f)
@@ -213,7 +212,7 @@ insert :: forall k f v. GCompare k => k v -> f v -> MonoidalDMap k f -> Monoidal
 insert k v (MonoidalDMap m) = MonoidalDMap (DMap.insert k v m)
 
 -- | /O(log n)/. Insert with a function, combining new value and old value.
--- @'insertWith' f key value mp@ 
+-- @'insertWith' f key value mp@
 -- will insert the entry @key :=> value@ into @mp@ if key does
 -- not exist in the map. If the key does exist, the function will
 -- insert the entry @key :=> f new_value old_value@.
@@ -226,7 +225,7 @@ insertWith' :: GCompare k => (f v -> f v -> f v) -> k v -> f v -> MonoidalDMap k
 insertWith' f k v (MonoidalDMap m) = MonoidalDMap (DMap.insertWith' f k v m)
 
 -- | /O(log n)/. Insert with a function, combining key, new value and old value.
--- @'insertWithKey' f key value mp@ 
+-- @'insertWithKey' f key value mp@
 -- will insert the entry @key :=> value@ into @mp@ if key does
 -- not exist in the map. If the key does exist, the function will
 -- insert the entry @key :=> f key new_value old_value@.
@@ -296,7 +295,7 @@ updateWithKey f k (MonoidalDMap m) = MonoidalDMap (DMap.updateWithKey f k m)
 
 -- | /O(log n)/. Lookup and update. See also 'updateWithKey'.
 -- The function returns changed value, if it is updated.
--- Returns the original key value if the map entry is deleted. 
+-- Returns the original key value if the map entry is deleted.
 updateLookupWithKey :: forall k f v. GCompare k => (k v -> f v -> Maybe (f v)) -> k v -> MonoidalDMap k f -> (Maybe (f v), MonoidalDMap k f)
 updateLookupWithKey f k (MonoidalDMap m) =
   case DMap.updateLookupWithKey f k m of
@@ -401,7 +400,7 @@ unionWithKey f (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.unionWithK
   Difference
 --------------------------------------------------------------------}
 
--- | /O(m * log (n\/m + 1)), m <= n/. Difference of two maps. 
+-- | /O(m * log (n\/m + 1)), m <= n/. Difference of two maps.
 -- Return elements of the first map not existing in the second map.
 difference :: GCompare k => MonoidalDMap k f -> MonoidalDMap k g -> MonoidalDMap k f
 difference (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.difference m n)
@@ -409,7 +408,7 @@ difference (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.difference m n
 -- | /O(n+m)/. Difference with a combining function. When two equal keys are
 -- encountered, the combining function is applied to the key and both values.
 -- If it returns 'Nothing', the element is discarded (proper set difference). If
--- it returns (@'Just' y@), the element is updated with a new value @y@. 
+-- it returns (@'Just' y@), the element is updated with a new value @y@.
 differenceWithKey :: GCompare k => (forall v. k v -> f v -> g v -> Maybe (f v)) -> MonoidalDMap k f -> MonoidalDMap k g -> MonoidalDMap k f
 differenceWithKey f (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.differenceWithKey f m n)
 
@@ -438,7 +437,7 @@ isSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOf m n
 isSubmapOfBy :: GCompare k => (forall v. k v -> k v -> f v -> g v -> Bool) -> MonoidalDMap k f -> MonoidalDMap k g -> Bool
 isSubmapOfBy f (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOfBy f m n
 
--- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal). 
+-- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
 -- Defined as (@'isProperSubmapOf' = 'isProperSubmapOfBy' 'eqTagged'@).
 isProperSubmapOf :: (GCompare k, EqTag k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isProperSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isProperSubmapOf m n
@@ -447,7 +446,7 @@ isProperSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isProperSubmapOf m n
  The expression (@'isProperSubmapOfBy' f m1 m2@) returns 'True' when
  @m1@ and @m2@ are not equal,
  all keys in @m1@ are in @m2@, and when @f@ returns 'True' when
- applied to their respective keys and values. 
+ applied to their respective keys and values.
 -}
 isProperSubmapOfBy :: GCompare k => (forall v. k v -> k v -> f v -> g v -> Bool) -> MonoidalDMap k f -> MonoidalDMap k g -> Bool
 isProperSubmapOfBy f (MonoidalDMap m) (MonoidalDMap n) = DMap.isProperSubmapOfBy f m n
@@ -514,7 +513,7 @@ mapAccumRWithKey f x (MonoidalDMap m) =
 
 -- | /O(n*log n)/.
 -- @'mapKeysWith' c f s@ is the map obtained by applying @f@ to each key of @s@.
--- 
+--
 -- The size of the result may be smaller if @f@ maps two or more distinct
 -- keys to the same new key.  In this case the associated values will be
 -- combined using @c@.
@@ -527,8 +526,8 @@ mapKeysWith c f (MonoidalDMap m) = MonoidalDMap (DMap.mapKeysWith c f m)
 -- That is, for any values @x@ and @y@, if @x@ < @y@ then @f x@ < @f y@.
 -- /The precondition is not checked./
 -- Semi-formally, we have:
--- 
--- > and [x < y ==> f x < f y | x <- ls, y <- ls] 
+--
+-- > and [x < y ==> f x < f y | x <- ls, y <- ls]
 -- >                     ==> mapKeysMonotonic f s == mapKeys f s
 -- >     where ls = keys s
 --
@@ -538,7 +537,7 @@ mapKeysMonotonic :: (forall v. k1 v -> k2 v) -> MonoidalDMap k1 f -> MonoidalDMa
 mapKeysMonotonic f (MonoidalDMap m) = MonoidalDMap (DMap.mapKeysMonotonic f m)
 
 {--------------------------------------------------------------------
-  Folds  
+  Folds
 --------------------------------------------------------------------}
 
 -- | /O(n)/. Post-order fold.  The function will be applied from the lowest
@@ -552,7 +551,7 @@ foldlWithKey :: (forall v. b -> k v -> f v -> b) -> b -> MonoidalDMap k f -> b
 foldlWithKey f x (MonoidalDMap m) = DMap.foldlWithKey f x m
 
 {--------------------------------------------------------------------
-  List variations 
+  List variations
 --------------------------------------------------------------------}
 
 -- | /O(n)/. Return all keys of the map in ascending order.
@@ -568,7 +567,7 @@ assocs :: MonoidalDMap k f -> [DSum k f]
 assocs (MonoidalDMap m) = DMap.assocs m
 
 {--------------------------------------------------------------------
-  Lists 
+  Lists
   use [foldlStrict] to reduce demand on the control-stack
 --------------------------------------------------------------------}
 
@@ -590,8 +589,8 @@ toDescList (MonoidalDMap m) = DMap.toDescList m
 
 {--------------------------------------------------------------------
   Building trees from ascending/descending lists can be done in linear time.
-  
-  Note that if [xs] is ascending that: 
+
+  Note that if [xs] is ascending that:
     fromAscList xs       == fromList xs
     fromAscListWith f xs == fromListWith f xs
 --------------------------------------------------------------------}
@@ -599,7 +598,7 @@ toDescList (MonoidalDMap m) = DMap.toDescList m
 -- | /O(n)/. Build a map from an ascending list in linear time with a
 -- combining function for equal keys.
 -- /The precondition (input list is ascending) is not checked./
-fromAscListWithKey :: GEq k => (forall v. k v -> f v -> f v -> f v) -> [DSum k f] -> MonoidalDMap k f 
+fromAscListWithKey :: GEq k => (forall v. k v -> f v -> f v -> f v) -> [DSum k f] -> MonoidalDMap k f
 fromAscListWithKey f xs = MonoidalDMap (DMap.fromAscListWithKey f xs)
 
 {--------------------------------------------------------------------
