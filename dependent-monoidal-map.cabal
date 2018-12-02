@@ -12,7 +12,6 @@ cabal-version: >=1.10
 
 library
   exposed-modules: Data.Dependent.Map.Monoidal
-  -- other-modules: 
   build-depends: base >=4.9 && <4.12
                , aeson
                , constraints
