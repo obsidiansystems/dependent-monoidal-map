@@ -29,61 +29,23 @@ import Prelude hiding (lookup, map)
 
 newtype MonoidalDMap (f :: k -> *) (g :: k -> *) = MonoidalDMap { unMonoidalDMap :: DMap f g }
 
--- Temporary shim to avoid making changes to dependent-sum and dependent-map.
--- TODO: Finalise constraints-extras and optionally get it upstreamed into constraints.
--- Then actually get these instances into the real DSum and DMap,
--- killing off EqTag, OrdTag, ShowTag and ReadTag.
-newtype FakeDSum f g = FakeDSum { unFakeDSum :: DSum f g }
+instance forall f g. (Has (ComposeC Eq g) f, GCompare f) => Eq (MonoidalDMap f g) where
+  MonoidalDMap m == MonoidalDMap m' = m == m'
 
-instance (GEq f, Has' Eq f g) => Eq (FakeDSum f g) where
-  FakeDSum ((k :: k a) :=> v) == FakeDSum (k' :=> v') = case geq k k' of
-    Nothing -> False
-    Just Refl -> has' @Eq @g k (v == v')
+instance forall f g. (Has (ComposeC Eq g) f, Has (ComposeC Ord g) f, GCompare f) => Ord (MonoidalDMap f g) where
+  compare (MonoidalDMap m) (MonoidalDMap m') = compare m m'
 
-instance (GCompare f, Has' Eq f g, Has' Ord f g) => Ord (FakeDSum f g) where
-  compare (FakeDSum (k :=> v)) (FakeDSum (k' :=> v')) = case gcompare k k' of
-    GLT -> LT
-    GGT -> GT
-    GEQ -> has' @Ord @g k (compare v v')
-
--- NB: We're not going to show/parse the "FakeDSum" constructor, because this whole datatype is a temporary shim.
-instance (ForallF Show f, Has' Show f g) => Show (FakeDSum f g) where
-  showsPrec p (FakeDSum ((k :: f a) :=> v)) = showParen (p >= 10)
-    ( whichever @Show @f @a (showsPrec 0 k)
-    . showString " :=> "
-    . has' @Show @g k (showsPrec 1 v)
-    )
-
-instance (GRead f, Has' Read f g) => Read (FakeDSum f g) where
-  readsPrec p = readParen (p > 1) $ \s ->
-    concat
-      [ getGReadResult withTag $ \tag ->
-          [ (FakeDSum (tag :=> val), rest'')
-          | (val, rest'') <- has' @Read @g tag $ readsPrec 1 rest'
-          ]
-      | (withTag, rest) <- greadsPrec p s
-      , (":=>", rest') <- lex rest
-      ]
-
-instance forall f g. (Has' Eq f g, GCompare f) => Eq (MonoidalDMap f g) where
-  MonoidalDMap m == MonoidalDMap m' =
-    (coerce (DMap.toList m) :: [FakeDSum f g]) == (coerce (DMap.toList m'))
-
-instance forall f g. (Has' Eq f g, Has' Ord f g, GCompare f) => Ord (MonoidalDMap f g) where
-  compare (MonoidalDMap m) (MonoidalDMap m') =
-    compare (coerce (DMap.toList m) :: [FakeDSum f g]) (coerce (DMap.toList m'))
-
-instance (Show (FakeDSum k f)) => Show (MonoidalDMap k f) where
+instance (Show (DSum k f)) => Show (MonoidalDMap k f) where
     showsPrec p m = showParen (p>10)
         ( showString "fromList "
-        . showsPrec 11 (coerce (toList m) :: [FakeDSum k f])
+        . showsPrec 11 (coerce (toList m) :: [DSum k f])
         )
 
-instance (GCompare k, Read (FakeDSum k f)) => Read (MonoidalDMap k f) where
+instance (GCompare k, Read (DSum k f)) => Read (MonoidalDMap k f) where
   readPrec = parens $ prec 10 $ do
     Ident "fromList" <- lexP
     xs <- readPrec
-    return . MonoidalDMap . DMap.fromList $ coerce (xs :: [FakeDSum k f])
+    return . MonoidalDMap . DMap.fromList $ coerce (xs :: [DSum k f])
   readListPrec = readListPrecDefault
 
 deriving instance (ToJSON (DMap f g)) => ToJSON (MonoidalDMap f g)
@@ -426,7 +388,10 @@ intersectionWithKey f (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.int
 -- | /O(n+m)/.
 -- This function is defined as (@'isSubmapOf' = 'isSubmapOfBy' 'eqTagged')@).
 --
-isSubmapOf :: (GCompare k, EqTag k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
+isSubmapOf
+  :: forall k f
+  .  (GCompare k, Has (ComposeC Eq f) k)
+  => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOf m n
 
 {- | /O(n+m)/.
@@ -439,7 +404,10 @@ isSubmapOfBy f (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOfBy f m n
 
 -- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
 -- Defined as (@'isProperSubmapOf' = 'isProperSubmapOfBy' 'eqTagged'@).
-isProperSubmapOf :: (GCompare k, EqTag k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
+isProperSubmapOf
+  :: forall k f
+  .  (GCompare k, Has (ComposeC Eq f) k)
+  => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isProperSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isProperSubmapOf m n
 
 {- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
@@ -623,7 +591,7 @@ splitLookup k (MonoidalDMap m) =
 
 -- | /O(n)/. Show the tree that implements the map. The tree is shown
 -- in a compressed, hanging format. See 'showTreeWith'.
-showTree :: ShowTag k f => MonoidalDMap k f -> String
+showTree :: (GShow k, Has (ComposeC Show f) k) => MonoidalDMap k f -> String
 showTree (MonoidalDMap m) = DMap.showTree m
 
 {- | /O(n)/. The expression (@'showTreeWith' showelem hang wide map@) shows
