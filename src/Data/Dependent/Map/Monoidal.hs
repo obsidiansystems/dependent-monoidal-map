@@ -9,8 +9,139 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GADTs #-}
 
-module Data.Dependent.Map.Monoidal where
+module Data.Dependent.Map.Monoidal
+    ( MonoidalDMap(..)
+    , DSum(..), Some(..)
+    , GCompare(..), GOrdering(..)
 
+    -- * Operators
+    , (!), (\\)
+
+    -- * Query
+    , null
+    , size
+    , member
+    , notMember
+    , lookup
+    , findWithDefault
+
+    -- * Construction
+    , empty
+    , singleton
+
+    -- ** Insertion
+    , insert
+    , insertWith
+    , insertWith'
+    , insertWithKey
+    , insertWithKey'
+    , insertLookupWithKey
+    , insertLookupWithKey'
+
+    -- ** Delete\/Update
+    , delete
+    , adjust
+    , adjustF
+    , adjustWithKey
+    , adjustWithKey'
+    , update
+    , updateWithKey
+    , updateLookupWithKey
+    , alter
+    , alterF
+
+    -- * Combine
+
+    -- ** Union
+    --, union
+    , unionWithKey
+    --, unions
+    , unionsWithKey
+
+    -- ** Difference
+    , difference
+    , differenceWithKey
+
+    -- ** Intersection
+    --, intersection
+    , intersectionWithKey
+
+    -- * Traversal
+    -- ** Map
+    , map
+    , mapWithKey
+    , traverseWithKey
+    , mapAccumLWithKey
+    , mapAccumRWithKey
+    , mapKeysWith
+    , mapKeysMonotonic
+
+    -- ** Fold
+    --, foldWithKey
+    , foldrWithKey
+    , foldlWithKey
+    --, foldlWithKey'
+
+    -- * Conversion
+    , keys
+    , assocs
+
+    -- ** Lists
+    , toList
+    , fromList
+    , fromListWithKey
+
+    -- ** Ordered lists
+    , toAscList
+    , toDescList
+    , fromAscList
+    , fromAscListWithKey
+    , fromDistinctAscList
+
+    -- * Filter
+    , filter
+    , filterWithKey
+    , partitionWithKey
+
+    , mapMaybe
+    , mapMaybeWithKey
+    , mapEitherWithKey
+
+    , split
+    , splitLookup
+
+    -- * Submap
+    , isSubmapOf, isSubmapOfBy
+    , isProperSubmapOf, isProperSubmapOfBy
+
+    -- * Indexed
+    , lookupIndex
+    , findIndex
+    , elemAt
+    , updateAt
+    , deleteAt
+
+    -- * Min\/Max
+    , findMin
+    , findMax
+    , lookupMin
+    , lookupMax
+    , deleteMin
+    , deleteMax
+    , deleteFindMin
+    , deleteFindMax
+    , updateMinWithKey
+    , updateMaxWithKey
+    , minViewWithKey
+    , maxViewWithKey
+
+    -- * Debugging
+    , showTree
+    , showTreeWith
+    , valid
+    ) where
+
+import Prelude hiding (null, lookup, map)
 import Data.Aeson
 import Data.Coerce
 import Data.Constraint.Extras
@@ -25,7 +156,6 @@ import Data.Maybe
 import Data.Semigroup
 import Data.Some hiding (This)
 import Text.Read
-import Prelude hiding (lookup, map)
 
 newtype MonoidalDMap (f :: k -> *) (g :: k -> *) = MonoidalDMap { unMonoidalDMap :: DMap f g }
 
@@ -59,6 +189,24 @@ instance (Has' Semigroup f g, GCompare f) => Monoid (MonoidalDMap f g) where
   mappend m n = m <> n
 
 deriving instance (FromJSON (DMap f g)) => FromJSON (MonoidalDMap f g)
+
+{--------------------------------------------------------------------
+  Operators
+--------------------------------------------------------------------}
+infixl 9 !,\\ --
+
+-- | /O(log n)/. Find the value at a key.
+-- Calls 'error' when the element can not be found.
+--
+-- > fromList [(5,'a'), (3,'b')] ! 1    Error: element not in the map
+-- > fromList [(5,'a'), (3,'b')] ! 5 == 'a'
+
+(!) :: GCompare k => MonoidalDMap k f -> k v -> f v
+(!) (MonoidalDMap m) k = m DMap.! k
+
+-- | Same as 'difference'.
+(\\) :: GCompare k => MonoidalDMap k f -> MonoidalDMap k f -> MonoidalDMap k f
+(MonoidalDMap m1) \\ (MonoidalDMap m2) = MonoidalDMap $ DMap.difference m1 m2
 
 {--------------------------------------------------------------------
   Construction
@@ -233,6 +381,15 @@ delete k (MonoidalDMap m) = MonoidalDMap (DMap.delete k m)
 adjust :: GCompare k => (f v -> f v) -> k v -> MonoidalDMap k f -> MonoidalDMap k f
 adjust f k (MonoidalDMap m) = MonoidalDMap (DMap.adjust f k m)
 
+-- | Works the same as 'adjust' except the new value is return in some 'Applicative' @f@.
+adjustF
+  :: forall k f v g
+  .  (GCompare  k, Applicative f)
+  => k v
+  -> (g v -> f (g v))
+  -> MonoidalDMap k g -> f (MonoidalDMap k g)
+adjustF k f = fmap MonoidalDMap . DMap.adjustF k f . unMonoidalDMap
+
 -- | /O(log n)/. Adjust a value at a specific key. When the key is not
 -- a member of the map, the original map is returned.
 adjustWithKey :: GCompare k => (k v -> f v -> f v) -> k v -> MonoidalDMap k f -> MonoidalDMap k f
@@ -268,6 +425,11 @@ updateLookupWithKey f k (MonoidalDMap m) =
 -- In short : @'lookup' k ('alter' f k m) = f ('lookup' k m)@.
 alter :: forall k f v. GCompare k => (Maybe (f v) -> Maybe (f v)) -> k v -> MonoidalDMap k f -> MonoidalDMap k f
 alter f k (MonoidalDMap m) = MonoidalDMap (DMap.alter f k m)
+
+-- | Works the same as 'alter' except the new value is return in some 'Functor' @f@.
+-- In short : @(\v' -> alter (const v') k dm) <$> f (lookup k dm)@
+alterF :: forall k f v g. (GCompare  k, Functor f) => k v -> (Maybe (g v) -> f (Maybe (g v))) -> MonoidalDMap k g -> f (MonoidalDMap k g)
+alterF k f = fmap MonoidalDMap . DMap.alterF k f . unMonoidalDMap
 
 {--------------------------------------------------------------------
   Indexing
@@ -547,9 +709,25 @@ fromListWithKey f xs = MonoidalDMap (DMap.fromListWithKey f xs)
 toList :: MonoidalDMap k f -> [DSum k f]
 toList (MonoidalDMap m) = DMap.toList m
 
+-- | /O(n*log n)/. Build a map from a list of key\/value pairs. See also 'fromAscList'.
+-- If the list contains more than one value for the same key, the last value
+-- for the key is retained.
+fromList :: GCompare k => [DSum k f] -> MonoidalDMap k f
+fromList = MonoidalDMap . DMap.fromList
+
 -- | /O(n)/. Convert to an ascending list.
 toAscList :: MonoidalDMap k f -> [DSum k f]
 toAscList (MonoidalDMap m) = DMap.toAscList m
+
+-- | /O(n)/. Build a map from an ascending list in linear time.
+-- /The precondition (input list is ascending) is not checked./
+fromAscList :: GEq k => [DSum k f] -> MonoidalDMap k f
+fromAscList = MonoidalDMap . DMap.fromAscList
+
+-- | /O(n)/. Build a map from an ascending list of distinct elements in linear time.
+-- /The precondition is not checked./
+fromDistinctAscList :: [DSum k f] -> MonoidalDMap k f
+fromDistinctAscList = MonoidalDMap . DMap.fromDistinctAscList
 
 -- | /O(n)/. Convert to a descending list.
 toDescList :: MonoidalDMap k f -> [DSum k f]
