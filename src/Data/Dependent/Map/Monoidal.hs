@@ -29,10 +29,10 @@ import Prelude hiding (lookup, map)
 
 newtype MonoidalDMap (f :: k -> *) (g :: k -> *) = MonoidalDMap { unMonoidalDMap :: DMap f g }
 
-instance forall f g. (Has (ComposeC Eq g) f, GCompare f) => Eq (MonoidalDMap f g) where
+instance forall f g. (Has' Eq f g, GCompare f) => Eq (MonoidalDMap f g) where
   MonoidalDMap m == MonoidalDMap m' = m == m'
 
-instance forall f g. (Has (ComposeC Eq g) f, Has (ComposeC Ord g) f, GCompare f) => Ord (MonoidalDMap f g) where
+instance forall f g. (Has' Eq f g, Has' Ord f g, GCompare f) => Ord (MonoidalDMap f g) where
   compare (MonoidalDMap m) (MonoidalDMap m') = compare m m'
 
 instance (Show (DSum k f)) => Show (MonoidalDMap k f) where
@@ -390,7 +390,7 @@ intersectionWithKey f (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.int
 --
 isSubmapOf
   :: forall k f
-  .  (GCompare k, Has (ComposeC Eq f) k)
+  .  (GCompare k, Has' Eq k f)
   => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOf m n
 
@@ -406,7 +406,7 @@ isSubmapOfBy f (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOfBy f m n
 -- Defined as (@'isProperSubmapOf' = 'isProperSubmapOfBy' 'eqTagged'@).
 isProperSubmapOf
   :: forall k f
-  .  (GCompare k, Has (ComposeC Eq f) k)
+  .  (GCompare k, Has' Eq k f)
   => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isProperSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isProperSubmapOf m n
 
@@ -591,7 +591,7 @@ splitLookup k (MonoidalDMap m) =
 
 -- | /O(n)/. Show the tree that implements the map. The tree is shown
 -- in a compressed, hanging format. See 'showTreeWith'.
-showTree :: (GShow k, Has (ComposeC Show f) k) => MonoidalDMap k f -> String
+showTree :: (GShow k, Has' Show k f) => MonoidalDMap k f -> String
 showTree (MonoidalDMap m) = DMap.showTree m
 
 {- | /O(n)/. The expression (@'showTreeWith' showelem hang wide map@) shows
