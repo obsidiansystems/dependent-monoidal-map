@@ -426,7 +426,7 @@ intersectionWithKey f (MonoidalDMap m) (MonoidalDMap n) = MonoidalDMap (DMap.int
 -- | /O(n+m)/.
 -- This function is defined as (@'isSubmapOf' = 'isSubmapOfBy' 'eqTagged')@).
 --
-isSubmapOf :: (GCompare k, EqTag k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
+isSubmapOf :: (GCompare k, Has' Eq k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOf m n
 
 {- | /O(n+m)/.
@@ -439,7 +439,7 @@ isSubmapOfBy f (MonoidalDMap m) (MonoidalDMap n) = DMap.isSubmapOfBy f m n
 
 -- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
 -- Defined as (@'isProperSubmapOf' = 'isProperSubmapOfBy' 'eqTagged'@).
-isProperSubmapOf :: (GCompare k, EqTag k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
+isProperSubmapOf :: (GCompare k, Has' Eq k f) => MonoidalDMap k f -> MonoidalDMap k f -> Bool
 isProperSubmapOf (MonoidalDMap m) (MonoidalDMap n) = DMap.isProperSubmapOf m n
 
 {- | /O(n+m)/. Is this a proper submap? (ie. a submap but not equal).
@@ -623,7 +623,7 @@ splitLookup k (MonoidalDMap m) =
 
 -- | /O(n)/. Show the tree that implements the map. The tree is shown
 -- in a compressed, hanging format. See 'showTreeWith'.
-showTree :: ShowTag k f => MonoidalDMap k f -> String
+showTree :: (GShow k, Has' Show k f) => MonoidalDMap k f -> String
 showTree (MonoidalDMap m) = DMap.showTree m
 
 {- | /O(n)/. The expression (@'showTreeWith' showelem hang wide map@) shows
