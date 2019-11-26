@@ -1,5 +1,5 @@
 name: dependent-monoidal-map
-version: 0.1.1.0
+version: 0.1.1.1
 description: Data.Dependent.Map variant that appends conflicting entries when merging maps instead of discarding one side of the conflict.
 license: BSD3
 license-file: LICENSE
