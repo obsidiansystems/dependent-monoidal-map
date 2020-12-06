@@ -1,5 +1,5 @@
 name: dependent-monoidal-map
-version: 0.1.1.1
+version: 0.1.2.0
 description: Data.Dependent.Map variant that appends conflicting entries when merging maps instead of discarding one side of the conflict.
 license: BSD3
 license-file: LICENSE
@@ -21,9 +21,9 @@ library
     aeson                       >= 1.4 && < 1.5,
     constraints                 >= 0.10.1 && < 0.11,
     constraints-extras          >= 0.3.0 && < 0.4,
-    dependent-map               >= 0.3 && < 0.4,
-    dependent-sum               >= 0.6.2 && < 0.7,
-    dependent-sum-aeson-orphans >= 0.2.1 && < 0.3
+    dependent-map               >= 0.4 && < 0.5,
+    dependent-sum               >= 0.7 && < 0.8,
+    dependent-sum-aeson-orphans >= 0.3 && < 0.4
   hs-source-dirs: src
   default-language: Haskell2010
 
