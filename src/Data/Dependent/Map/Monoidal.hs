@@ -24,6 +24,7 @@ import Data.GADT.Show
 import Data.Maybe
 import Data.Semigroup
 import Data.Some hiding (This)
+import Data.Type.Equality
 import Text.Read
 import Prelude hiding (lookup, map)
 
