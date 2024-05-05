@@ -21,6 +21,7 @@ import Data.Dependent.Sum
 import Data.Dependent.Sum.Orphans ()
 import Data.GADT.Compare
 import Data.GADT.Show
+import Data.Kind (Type)
 import Data.Maybe
 import Data.Semigroup
 import Data.Some hiding (This)
@@ -28,7 +29,7 @@ import Data.Type.Equality
 import Text.Read
 import Prelude hiding (lookup, map)
 
-newtype MonoidalDMap (f :: k -> *) (g :: k -> *) = MonoidalDMap { unMonoidalDMap :: DMap f g }
+newtype MonoidalDMap (f :: k -> Type) (g :: k -> Type) = MonoidalDMap { unMonoidalDMap :: DMap f g }
 
 -- Temporary shim to avoid making changes to dependent-sum and dependent-map.
 -- TODO: Finalise constraints-extras and optionally get it upstreamed into constraints.
@@ -95,7 +96,6 @@ instance (Has' Semigroup f g, GCompare f) => Semigroup (MonoidalDMap f g) where
 
 instance (Has' Semigroup f g, GCompare f) => Monoid (MonoidalDMap f g) where
   mempty = empty
-  mappend m n = m <> n
 
 deriving instance (FromJSON (DMap f g)) => FromJSON (MonoidalDMap f g)
 

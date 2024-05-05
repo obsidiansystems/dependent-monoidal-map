@@ -19,9 +19,9 @@ tested-with:
 library
   exposed-modules:  Data.Dependent.Map.Monoidal
   build-depends:
-      aeson                        >=1.4    && <2.2
-    , base                         >=4.9    && <4.17
-    , constraints                  >=0.10.1 && <0.14
+      aeson                        >=1.4    && <2.3
+    , base                         >=4.9    && <4.20
+    , constraints                  >=0.10.1 && <0.15
     , constraints-extras           >=0.3.0  && <0.5
     , dependent-map                >=0.4    && <0.5
     , dependent-sum                >=0.7    && <0.8
