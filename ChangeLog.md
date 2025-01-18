@@ -1,5 +1,9 @@
 # Revision history for dependent-monoidal-map
 
+## 0.1.1.5
+
+* Support GHC 9.12
+
 ## 0.1.1.4
 
 * Add support for GHC 9.8
