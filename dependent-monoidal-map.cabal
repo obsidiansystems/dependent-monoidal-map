@@ -14,13 +14,13 @@ cabal-version:      >=1.10
 category:           Data
 synopsis:           Dependent map that uses semigroup mappend
 tested-with:
-  GHC ==8.6.5 || ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.3 || ==9.8.1
+  GHC ==8.6.5 || ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.3 || ==9.8.1 || ==9.10.1 || ==9.12.1
 
 library
   exposed-modules:  Data.Dependent.Map.Monoidal
   build-depends:
       aeson                        >=1.4    && <2.3
-    , base                         >=4.9    && <4.21
+    , base                         >=4.9    && <4.22
     , constraints                  >=0.10.1 && <0.15
     , constraints-extras           >=0.3.0  && <0.5
     , dependent-map                >=0.4    && <0.5
